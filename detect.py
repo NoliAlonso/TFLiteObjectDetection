@@ -35,9 +35,13 @@ fps_calculation_interval = 30  # Calculate FPS every 30 frames
 
 class TFLiteObjectDetection(ObjectDetection):
     """Object Detection class for TensorFlow Lite"""
-    def __init__(self, model_filename, labels):
+    def __init__(self, model_filename, labels, num_threads=num_threads, threshold=threshold, max_detections=max_detections):
         super(TFLiteObjectDetection, self).__init__(labels)
         self.interpreter = tf.lite.Interpreter(model_path=model_filename)
+
+        # Set the number of CPU threads for inference
+        self.interpreter.set_num_threads(num_threads)
+
         self.interpreter.allocate_tensors()
         self.input_index = self.interpreter.get_input_details()[0]['index']
         self.output_index = self.interpreter.get_output_details()[0]['index']
@@ -54,8 +58,7 @@ class TFLiteObjectDetection(ObjectDetection):
         return self.interpreter.get_tensor(self.output_index)[0]
 
 
-def run(model: str, camera_id: int, width: int, height: int, num_threads: int,
-        enable_edgetpu: bool) -> None:
+def run(model: str, camera_id: int, width: int, height: int, num_threads: int, threshold: float, max_detections: int) -> None:
   """Continuously run inference on images acquired from the camera.
 
   Args:
@@ -64,9 +67,14 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int,
     width: The width of the frame captured from the camera.
     height: The height of the frame captured from the camera.
     num_threads: The number of CPU threads to run the model.
-    enable_edgetpu: True/False whether the model is a EdgeTPU model.
+    threshold: Prediction probability for displaying
+    max_detections: Maximum number of objects to display
   """
-  # Load labels
+  
+  # Load the custom vision ML model 
+  od_model = TFLiteObjectDetection(model, labels, num_threads, threshold, max_detections)
+  
+  # Load the custom vision labels
   with open(LABELS_FILENAME, 'r') as f:
       labels = [label.strip() for label in f.readlines()]
 
@@ -78,9 +86,7 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int,
   cap = cv2.VideoCapture(camera_id)
   cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
   cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-
-  od_model = TFLiteObjectDetection(MODEL_FILENAME, labels)
-
+   
   # Read the first frame to determine its dimensions
   success, image = cap.read()
   if not success:
@@ -101,14 +107,14 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int,
     grabbed = cap.grab()
     if not grabbed:
         sys.exit(
-            'ERROR: Unable to grab frame from webcam. Please verify your webcam settings.'
+            'ERROR: Unable to grab frame from camera.'
         )
 
     # Read the grabbed frame
     success, image = cap.retrieve()
     if not success:
         sys.exit(
-            'ERROR: Unable to retrieve frame from webcam. Please verify your webcam settings.'
+            'ERROR: Unable to retrieve frame from camera.'
         )
 
     counter += 1
@@ -163,9 +169,13 @@ def main():
       '--model',
       help='Path of the object detection model.',
       required=False,
-      default='efficientdet_lite0.tflite')
+      default='customvisionpsemodel.tflite')
   parser.add_argument(
-      '--cameraId', help='Id of camera.', required=False, type=int, default=0)
+      '--cameraId', 
+      help='Id of camera.',
+      required=False, 
+      type=int, 
+      default=0)
   parser.add_argument(
       '--frameWidth',
       help='Width of frame to capture from camera.',
@@ -185,15 +195,19 @@ def main():
       type=int,
       default=4)
   parser.add_argument(
-      '--enableEdgeTPU',
-      help='Whether to run the model on EdgeTPU.',
-      action='store_true',
+      '--threshold',
+      help="Probability threshold.",
       required=False,
-      default=False)
-  args = parser.parse_args()
+      type=float, 
+      default=0.1)
+  parser.add_argument(
+      '--max_detections',
+      help="Maximum number of detections.",
+      required=False,
+      type=int, 
+      default=16)
 
-  run(args.model, int(args.cameraId), args.frameWidth, args.frameHeight,
-      int(args.numThreads), bool(args.enableEdgeTPU))
+  run(args.model, int(args.cameraId), args.frameWidth, args.frameHeight, int(args.numThreads), float(args.threshold), int(args.max_detections)
 
 
 if __name__ == '__main__':
