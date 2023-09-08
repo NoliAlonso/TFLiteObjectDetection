@@ -21,7 +21,7 @@ import numpy as np
 from PIL import Image
 from object_detection import ObjectDetection
 
-MODEL_FILENAME = 'psemodel.tflite'
+MODEL_FILENAME = 'customvisionpsemodel.tflite'
 LABELS_FILENAME = 'labels.txt'
 
 # Visualization parameters
@@ -35,12 +35,12 @@ fps_calculation_interval = 30  # Calculate FPS every 30 frames
 
 class TFLiteObjectDetection(ObjectDetection):
     """Object Detection class for TensorFlow Lite"""
-    def __init__(self, model_filename, labels, num_threads=num_threads, threshold=threshold, max_detections=max_detections):
+    def __init__(self, model_filename, labels, num_threads, threshold, max_detections):
         super(TFLiteObjectDetection, self).__init__(labels)
         self.interpreter = tf.lite.Interpreter(model_path=model_filename)
 
         # Set the number of CPU threads for inference
-        self.interpreter.set_num_threads(num_threads)
+        # self.interpreter.set_num_threads(num_threads)
 
         self.interpreter.allocate_tensors()
         self.input_index = self.interpreter.get_input_details()[0]['index']
@@ -71,13 +71,13 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
     max_detections: Maximum number of objects to display
   """
   
-  # Load the custom vision ML model 
-  od_model = TFLiteObjectDetection(model, labels, num_threads, threshold, max_detections)
-  
-  # Load the custom vision labels
+    # Load the custom vision labels
   with open(LABELS_FILENAME, 'r') as f:
       labels = [label.strip() for label in f.readlines()]
 
+  # Load the custom vision ML model 
+  od_model = TFLiteObjectDetection(model, labels, num_threads, threshold, max_detections)
+  
   # Variables to calculate FPS
   counter, fps = 0, 0
   start_time = time.time()
@@ -181,13 +181,13 @@ def main():
       help='Width of frame to capture from camera.',
       required=False,
       type=int,
-      default=640)
+      default=512)
   parser.add_argument(
       '--frameHeight',
       help='Height of frame to capture from camera.',
       required=False,
       type=int,
-      default=480)
+      default=512)
   parser.add_argument(
       '--numThreads',
       help='Number of CPU threads to run the model.',
@@ -207,8 +207,12 @@ def main():
       type=int, 
       default=16)
 
-  run(args.model, int(args.cameraId), args.frameWidth, args.frameHeight, int(args.numThreads), float(args.threshold), int(args.max_detections)
+  args = parser.parse_args()
 
+  try:
+    run(args.model, args.cameraId, args.frameWidth, args.frameHeight, args.numThreads, args.threshold, args.max_detections)
+  except Exception as e:
+    print(f"An error occurred: {str(e)}")
 
 if __name__ == '__main__':
   main()

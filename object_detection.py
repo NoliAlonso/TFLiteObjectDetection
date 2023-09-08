@@ -16,20 +16,22 @@ class ObjectDetection(object):
     IOU_THRESHOLD = 0.45
     DEFAULT_INPUT_SIZE = 512 * 512
 
-    def __init__(self, labels, num_threads, threshold, max_detections):
+    def __init__(self, labels, num_threads:int=1, threshold:float=0.5, max_detections:int=10):
         """Initialize the class
 
         Args:
             labels ([str]): list of labels for the exported model.
             prob_threshold (float): threshold for class probability.
             max_detections (int): the max number of output results.
+            threads (int): the number of threads to run on
         """
 
-        assert len(labels) >= 1, "At least 1 label is required"
+        # assert len(labels) >= 1, "At least 1 label is required"
 
         self.labels = labels
         self.prob_threshold = threshold
         self.max_detections = max_detections
+        self.threads = num_threads
 
     def _logistic(self, x):
         return np.where(x > 0, 1 / (1 + np.exp(-x)), np.exp(x) / (1 + np.exp(x)))
@@ -99,7 +101,7 @@ class ObjectDetection(object):
 
         outputs = prediction_output.reshape((height, width, num_anchor, -1))
 
-        # Extract bouding box information
+        # Extract bounding box information
         x = (self._logistic(outputs[..., 0]) + np.arange(width)[np.newaxis, :, np.newaxis]) / width
         y = (self._logistic(outputs[..., 1]) + np.arange(height)[:, np.newaxis, np.newaxis]) / height
         w = np.exp(outputs[..., 2]) * anchors[:, 0][np.newaxis, np.newaxis, :] / width
@@ -133,7 +135,7 @@ class ObjectDetection(object):
             exif = image._getexif()
             if exif != None and exif_orientation_tag in exif:
                 orientation = exif.get(exif_orientation_tag, 1)
-                print('Image has EXIF Orientation: {}'.format(str(orientation)))
+                # print('Image has EXIF Orientation: {}'.format(str(orientation)))
                 # orientation is 1 based, shift to zero based and flip/transpose based on 0-based values
                 orientation -= 1
                 if orientation >= 4:
@@ -153,13 +155,17 @@ class ObjectDetection(object):
         image = image.convert("RGB") if image.mode != "RGB" else image
         image = self._update_orientation(image)
 
-        ratio = math.sqrt(self.DEFAULT_INPUT_SIZE / image.width / image.height)
-        new_width = int(image.width * ratio)
-        new_height = int(image.height * ratio)
+        target_width, target_height = self.calculate_target_dimensions(image.width, image.height)
+        image = image.resize((target_width, target_height))
+        return image
+    
+    def calculate_target_dimensions(self, width, height):
+        ratio = math.sqrt(self.DEFAULT_INPUT_SIZE / width / height)
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
         new_width = 32 * math.ceil(new_width / 32)
         new_height = 32 * math.ceil(new_height / 32)
-        image = image.resize((new_width, new_height))
-        return image
+        return new_width, new_height
 
     def predict(self, preprocessed_inputs):
         """Evaluate the model and get the output
