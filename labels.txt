@@ -1,20 +1,14 @@
 Band
 Basophil
 Blast
-Blast-C
 Eosinophil
 Lymphocyte
-Lymphocyte-Large
 Lymphocyte-ReactivePlasmacytoid
 Metamyelocyte
 Monocyte
 Myeloblast
 Myelocyte
 Neutrophil
-Neutrophil-Hypersegmented
-Neutrophil-Hyposegmented
 Orthochromic Normoblast
-PLT-Giant
 Polychromatophilic normoblast
 Promyelocyte
-Smudge
