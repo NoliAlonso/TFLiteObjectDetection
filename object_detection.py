@@ -13,26 +13,14 @@ class ObjectDetection(object):
     """
 
     ANCHORS = np.array([[0.573, 0.677], [1.87, 2.06], [3.34, 5.47], [7.88, 3.53], [9.77, 9.17]])
-    IOU_THRESHOLD = 0.45
-    DEFAULT_INPUT_SIZE = 512 * 512
 
     def __init__(self, labels, num_threads=1, threshold=0.5, max_detections=10, iou_threshold=0.45, default_input_size=512 * 512):
-         """Initialize the class
-
-        Args:
-            labels ([str]): list of labels for the exported model.
-            prob_threshold (float): threshold for class probability.
-            max_detections (int): the max number of output results.
-            threads (int): the number of threads to run on
-        """
-        
         self.labels = labels
         self.prob_threshold = threshold
         self.max_detections = max_detections
         self.threads = num_threads
         self.IOU_THRESHOLD = iou_threshold
         self.DEFAULT_INPUT_SIZE = default_input_size
-    
 
     def _logistic(self, x):
         return np.where(x > 0, 1 / (1 + np.exp(-x)), np.exp(x) / (1 + np.exp(x)))
