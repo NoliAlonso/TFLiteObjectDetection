@@ -16,8 +16,8 @@ class ObjectDetection(object):
     IOU_THRESHOLD = 0.45
     DEFAULT_INPUT_SIZE = 512 * 512
 
-    def __init__(self, labels, num_threads:int=1, threshold:float=0.5, max_detections:int=10):
-        """Initialize the class
+    def __init__(self, labels, num_threads=1, threshold=0.5, max_detections=10, iou_threshold=0.45, default_input_size=512 * 512):
+         """Initialize the class
 
         Args:
             labels ([str]): list of labels for the exported model.
@@ -25,13 +25,14 @@ class ObjectDetection(object):
             max_detections (int): the max number of output results.
             threads (int): the number of threads to run on
         """
-
-        # assert len(labels) >= 1, "At least 1 label is required"
-
+        
         self.labels = labels
         self.prob_threshold = threshold
         self.max_detections = max_detections
         self.threads = num_threads
+        self.IOU_THRESHOLD = iou_threshold
+        self.DEFAULT_INPUT_SIZE = default_input_size
+    
 
     def _logistic(self, x):
         return np.where(x > 0, 1 / (1 + np.exp(-x)), np.exp(x) / (1 + np.exp(x)))
