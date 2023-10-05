@@ -57,6 +57,35 @@ class TFLiteObjectDetection(ObjectDetection):
         self.interpreter.invoke()
         return self.interpreter.get_tensor(self.output_index)[0]
 
+def capture_frame(cap):
+    grabbed = cap.grab()
+    if not grabbed:
+        sys.exit('ERROR: Unable to grab frame from camera.')
+    _, frame = cap.retrieve()
+    if frame is None:
+        sys.exit('ERROR: Unable to retrieve frame from camera.')
+    return frame
+
+def draw_detection_results(image, detection_result):
+    for detection in detection_result:
+        bounding_box = detection['boundingBox']
+        left = int(bounding_box['left'] * image.width)
+        top = int(bounding_box['top'] * image.height)
+        width = int(bounding_box['width'] * image.width)
+        height = int(bounding_box['height'] * image.height)
+
+        # Draw bounding box rectangle
+        cv2.rectangle(image, (left, top), (left + width, top + height), (0, 255, 0), 2)
+
+        # Draw label
+        label = f"{detection['tagName']} {detection['probability']:.2f}"
+        cv2.putText(image, label, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+def display_fps(image, fps):
+    fps_text = 'FPS = {:.1f}'.format(fps)
+    text_location = (left_margin, row_size)
+    cv2.putText(image, fps_text, text_location, cv2.FONT_HERSHEY_PLAIN, font_size, text_color, font_thickness)
+    return image
 
 def run(model: str, camera_id: int, width: int, height: int, num_threads: int, threshold: float, max_detections: int) -> None:
   """Continuously run inference on images acquired from the camera.
@@ -103,43 +132,17 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
 
   # Continuously capture images from the camera and run inference
   while cap.isOpened():
-    # Grab the frame from the camera without decoding it
-    grabbed = cap.grab()
-    if not grabbed:
-        sys.exit(
-            'ERROR: Unable to grab frame from camera.'
-        )
-
-    # Read the grabbed frame
-    success, image = cap.retrieve()
-    if not success:
-        sys.exit(
-            'ERROR: Unable to retrieve frame from camera.'
-        )
-
+    frame = capture_frame(cap)
     counter += 1
-    image = cv2.flip(image, 1)   
 
-     # Convert to PIL Image
+    # Convert to PIL Image
     pil_image = Image.fromarray(image)
 
     # Run object detection using the ObjectDetection instance
     detection_result = od_model.predict_image(pil_image)
 
     # Draw bounding boxes based on the detection result
-    for detection in detection_result:
-       bounding_box = detection['boundingBox']
-       left = int(bounding_box['left'] * pil_image.width)
-       top = int(bounding_box['top'] * pil_image.height)
-       width = int(bounding_box['width'] * pil_image.width)
-       height = int(bounding_box['height'] * pil_image.height)
-
-       # Draw bounding box rectangle
-       cv2.rectangle(image, (left, top), (left + width, top + height), (0, 255, 0), 2)
-
-       # Draw label
-       label = f"{detection['tagName']} {detection['probability']:.2f}"
-       cv2.putText(image, label, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+    draw_detection_results(frame, detection_result)
   
     # Calculate the FPS periodically
     if counter % fps_calculation_interval == 0:
@@ -147,16 +150,12 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
         fps = fps_calculation_interval / (end_time - start_time)
         start_time = time.time()
 
-    # Show the FPS
-    fps_text = 'FPS = {:.1f}'.format(fps)
-    text_location = (left_margin, row_size)
-    cv2.putText(image, fps_text, text_location, cv2.FONT_HERSHEY_PLAIN,
-                font_size, text_color, font_thickness)
-
+    frame_with_fps = display_fps(frame, fps)
+    cv2.imshow('object_detector', frame_with_fps)
+      
     # Stop the program if the ESC key is pressed.
     if cv2.waitKey(1) == 27:
       break
-    cv2.imshow('object_detector', image)
 
   cap.release()
   cv2.destroyAllWindows()
