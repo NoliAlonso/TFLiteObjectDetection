@@ -135,15 +135,12 @@ class ObjectDetection(object):
                     image = image.transpose(Image.FLIP_LEFT_RIGHT)
         return image
 
-    def predict_image(self, image):
-        inputs = self.preprocess(image)
-        prediction_outputs = self.predict(inputs)
-        return self.postprocess(prediction_outputs)
+    def _convert_to_rgb(self, image):
+        return image.convert("RGB") if image.mode != "RGB" else image
 
     def preprocess(self, image):
-        image = image.convert("RGB") if image.mode != "RGB" else image
+        image = self._convert_to_rgb(image)
         image = self._update_orientation(image)
-
         target_width, target_height = self.calculate_target_dimensions(image.width, image.height)
         image = image.resize((target_width, target_height))
         return image
@@ -156,6 +153,11 @@ class ObjectDetection(object):
         new_height = 32 * math.ceil(new_height / 32)
         return new_width, new_height
 
+    def predict_image(self, image):
+        inputs = self.preprocess(image)
+        prediction_outputs = self.predict(inputs)
+        return self.postprocess(prediction_outputs)
+    
     def predict(self, preprocessed_inputs):
         """Evaluate the model and get the output
 
@@ -180,9 +182,7 @@ class ObjectDetection(object):
         index = index[(-max_probs[index]).argsort()]
 
         # Remove overlapping bounding boxes
-        selected_boxes, selected_classes, selected_probs = self._non_maximum_suppression(boxes[index],
-                                                                                         class_probs[index],
-                                                                                         self.max_detections)
+        selected_boxes, selected_classes, selected_probs = self._non_maximum_suppression(boxes[index], class_probs[index], self.max_detections)
 
         return [{'probability': round(float(selected_probs[i]), 8),
                  'tagId': int(selected_classes[i]),
