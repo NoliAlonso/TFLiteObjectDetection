@@ -1,16 +1,17 @@
-# TensorFlow Lite Python object detection using CustomVision exported model
+# CustomVision - TensorFlow Lite Object Detection
 
+Create from exporting the customvision model as tensorflow zip file with sample code.
 
-## Seting up 
+-- When using a Raspberry Pi with a Raspberry Pi Camera, due to OpenCV (cv2), it requires legacy camera to be enabled in the raspi-config.
 
-Use the script to install the required Python packages:
-
-...
-sh setup.sh
-```
-
-## Run the example
+## Installation
 
 ```
-python3 detect.py --model
+pip install -r requirements.txt
+```
+
+## Run using:
+
+```
+python detect.py 
 ```
