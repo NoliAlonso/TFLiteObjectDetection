@@ -15,3 +15,5 @@ pip install -r requirements.txt
 ```
 python detect.py 
 ```
+
+Expected performance is 1 FPS or less.
