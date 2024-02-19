@@ -21,7 +21,7 @@ import numpy as np
 from PIL import Image
 from object_detection import ObjectDetection
 
-MODEL_FILENAME = 'customvisionpsemodel.tflite'
+MODEL_FILENAME = 'model.tflite'
 LABELS_FILENAME = 'labels.txt'
 
 # Visualization parameters
@@ -168,7 +168,7 @@ def main():
       '--model',
       help='Path of the object detection model.',
       required=False,
-      default='customvisionpsemodel.tflite')
+      default='model.tflite')
   parser.add_argument(
       '--cameraId', 
       help='Id of camera.',
