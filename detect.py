@@ -20,6 +20,7 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 from object_detection import ObjectDetection
+import threading
 
 MODEL_FILENAME = 'model.tflite'
 LABELS_FILENAME = 'labels.txt'
@@ -31,6 +32,30 @@ text_color = (0, 0, 255)  # red
 font_size = 1
 font_thickness = 1
 fps_calculation_interval = 30  # Calculate FPS every 30 frames
+
+# Define a thread class for performing inference
+class InferenceThread(threading.Thread):
+    def __init__(self, od_model, frame):
+        super(InferenceThread, self).__init__()
+        self.od_model = od_model
+        self.frame = frame
+        self.detection_result = []
+
+    def run(self):
+        # Perform inference on the frame
+        self.detection_result = self.od_model.predict_image(self.frame)
+
+# Define a thread class for displaying frames
+class DisplayThread(threading.Thread):
+    def __init__(self, window_name, frame):
+        super(DisplayThread, self).__init__()
+        self.window_name = window_name
+        self.frame = frame
+
+    def run(self):
+        # Display the frame
+        cv2.imshow(self.window_name, self.frame)
+        cv2.waitKey(1)
 
 
 class TFLiteObjectDetection(ObjectDetection):
@@ -65,16 +90,17 @@ def capture_frame(cap):
 def draw_detection_results(image, detection_result):
     for detection in detection_result:
         bounding_box = detection['boundingBox']
-        left = int(bounding_box['left'] * image.width)
-        top = int(bounding_box['top'] * image.height)
-        width = int(bounding_box['width'] * image.width)
-        height = int(bounding_box['height'] * image.height)
+        left = int(bounding_box['left'] * image.shape[1])
+        top = int(bounding_box['top'] * image.shape[0])
+        width = int(bounding_box['width'] * image.shape[1])
+        height = int(bounding_box['height'] * image.shape[0])
 
         # Draw bounding box rectangle
         cv2.rectangle(image, (left, top), (left + width, top + height), (0, 255, 0), 2)
 
         # Draw label
         label = f"{detection['tagName']} {detection['probability']:.2f}"
+        # print(label)
         cv2.putText(image, label, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 def display_fps(image, fps):
@@ -112,6 +138,9 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
   cap = cv2.VideoCapture(camera_id)
   cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
   cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+
+  inference_threads = []
+  display_threads = []
    
   # Read the first frame to determine its dimensions
   success, image = cap.read()
@@ -120,12 +149,6 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
           'ERROR: Unable to read from webcam. Please verify your webcam settings.'
       )
 
-  # Calculate the aspect ratio
-  aspect_ratio = image.shape[1] / image.shape[0]
-
-  # Resize dimensions based on the aspect ratio
-  new_width = width
-  new_height = int(new_width / aspect_ratio)
 
   # Continuously capture images from the camera and run inference
   while cap.isOpened():
@@ -133,7 +156,7 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
     counter += 1
 
     # Convert to PIL Image
-    pil_image = Image.fromarray(image)
+    pil_image = Image.fromarray(frame)
 
     # Run object detection using the ObjectDetection instance
     detection_result = od_model.predict_image(pil_image)
@@ -146,9 +169,11 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
         end_time = time.time()
         fps = fps_calculation_interval / (end_time - start_time)
         start_time = time.time()
+        # print(fps)
 
     frame_with_fps = display_fps(frame, fps)
-    cv2.imshow('object_detector', frame_with_fps)
+    
+    cv2.imshow('WBC detector', frame_with_fps)
       
     # Stop the program if the ESC key is pressed.
     if cv2.waitKey(1) == 27:
@@ -177,13 +202,13 @@ def main():
       help='Width of frame to capture from camera.',
       required=False,
       type=int,
-      default=512)
+      default=640)
   parser.add_argument(
       '--frameHeight',
       help='Height of frame to capture from camera.',
       required=False,
       type=int,
-      default=512)
+      default=480)
   parser.add_argument(
       '--numThreads',
       help='Number of CPU threads to run the model.',
