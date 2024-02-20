@@ -7,11 +7,8 @@ import numpy as np
 import math
 from PIL import Image
 
-
 class ObjectDetection(object):
-    """Class for Custom Vision's exported object detection model
-    """
-
+    
     ANCHORS = np.array([[0.573, 0.677], [1.87, 2.06], [3.34, 5.47], [7.88, 3.53], [9.77, 9.17]])
 
     def __init__(self, labels, num_threads=4, threshold=0.5, overlap=0.4, max_detections=8, default_input_size=512 * 512):
