@@ -20,6 +20,7 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 from object_detection import ObjectDetection
+import threading
 
 MODEL_FILENAME = 'model.tflite'
 LABELS_FILENAME = 'labels.txt'
@@ -212,5 +213,109 @@ def main():
   except Exception as e:
     print(f"An error occurred: {str(e)}")
 
+
+
+def capture_and_detect(cap, od_model):
+    counter = 0
+    fps = 0
+    start_time = time.time()
+
+    while cap.isOpened():
+        frame = capture_frame(cap)
+        counter += 1
+
+        pil_image = Image.fromarray(frame)
+        detection_result = od_model.predict_image(pil_image)
+
+        if detection_result is not None:
+            draw_detection_results(frame, detection_result)
+
+        if counter % fps_calculation_interval == 0:
+            end_time = time.time()
+            fps = fps_calculation_interval / (end_time - start_time)
+            start_time = time.time()
+
+        frame_with_fps = display_fps(frame, fps)
+        cv2.imshow('WBC detector', frame_with_fps)
+
+        if cv2.waitKey(1) == 27:
+            break
+
+def run_with_threading(model, camera_id, width, height, num_threads, threshold, overlap, max_detections):
+    with open(LABELS_FILENAME, 'r') as f:
+        labels = [label.strip() for label in f.readlines()]
+
+    od_model = TFLiteObjectDetection(model, labels, num_threads, threshold, overlap, max_detections)
+
+    cap = cv2.VideoCapture(camera_id)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+
+    # Start a separate thread for capturing frames and running inference
+    detection_thread = threading.Thread(target=capture_and_detect, args=(cap, od_model))
+    detection_thread.start()
+
+    detection_thread.join()  # Wait for the thread to finish
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+def main_with_threading():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        '--model',
+        help='Path of the object detection model.',
+        required=False,
+        default='model.tflite')
+    parser.add_argument(
+        '--cameraId', 
+        help='Id of camera.',
+        required=False, 
+        type=int, 
+        default=0)
+    parser.add_argument(
+        '--frameWidth',
+        help='Width of frame to capture from camera.',
+        required=False,
+        type=int,
+        default=640)
+    parser.add_argument(
+        '--frameHeight',
+        help='Height of frame to capture from camera.',
+        required=False,
+        type=int,
+        default=480)
+    parser.add_argument(
+        '--numThreads',
+        help='Number of CPU threads to run the model.',
+        required=False,
+        type=int,
+        default=4)
+    parser.add_argument(
+        '--threshold',
+        help="Probability threshold.",
+        required=False,
+        type=float, 
+        default=0.5)
+    parser.add_argument(
+        '--overlap',
+        help="Overlap threshold.",
+        required=False,
+        type=float, 
+        default=0.4)
+    parser.add_argument(
+        '--max_detections',
+        help="Maximum number of detections.",
+        required=False,
+        type=int, 
+        default=8)
+
+    args = parser.parse_args()
+
+    try:
+        run_with_threading(args.model, args.cameraId, args.frameWidth, args.frameHeight, args.numThreads, args.threshold, args.overlap, args.max_detections)
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
 if __name__ == '__main__':
-  main()
+    main_with_threading()
