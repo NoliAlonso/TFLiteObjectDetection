@@ -33,31 +33,6 @@ font_size = 1
 font_thickness = 1
 fps_calculation_interval = 30  # Calculate FPS every 30 frames
 
-# Define a thread class for performing inference
-class InferenceThread(threading.Thread):
-    def __init__(self, od_model, frame):
-        super(InferenceThread, self).__init__()
-        self.od_model = od_model
-        self.frame = frame
-        self.detection_result = []
-
-    def run(self):
-        # Perform inference on the frame
-        self.detection_result = self.od_model.predict_image(self.frame)
-
-# Define a thread class for displaying frames
-class DisplayThread(threading.Thread):
-    def __init__(self, window_name, frame):
-        super(DisplayThread, self).__init__()
-        self.window_name = window_name
-        self.frame = frame
-
-    def run(self):
-        # Display the frame
-        cv2.imshow(self.window_name, self.frame)
-        cv2.waitKey(1)
-
-
 class TFLiteObjectDetection(ObjectDetection):
     """Object Detection class for TensorFlow Lite"""
     def __init__(self, model_filename, labels, num_threads, threshold, overlap, max_detections):
@@ -138,9 +113,6 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
   cap = cv2.VideoCapture(camera_id)
   cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
   cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-
-  inference_threads = []
-  display_threads = []
    
   # Read the first frame to determine its dimensions
   success, image = cap.read()
@@ -148,7 +120,6 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
       sys.exit(
           'ERROR: Unable to read from webcam. Please verify your webcam settings.'
       )
-
 
   # Continuously capture images from the camera and run inference
   while cap.isOpened():
