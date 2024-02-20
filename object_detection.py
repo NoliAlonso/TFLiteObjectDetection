@@ -139,11 +139,20 @@ class ObjectDetection(object):
         return image.convert("RGB") if image.mode != "RGB" else image
 
     def preprocess(self, image):
-        image = self._convert_to_rgb(image)
         image = self._update_orientation(image)
-        target_width, target_height = self.calculate_target_dimensions(image.width, image.height)
-        image = image.resize((target_width, target_height))
-        return image
+
+        # Convert to numpy array
+        image_array = np.array(image)
+
+        # Convert to RGB if not already in RGB format
+        if image_array.ndim != 3 or image_array.shape[2] != 3:
+            image_array = image_array.convert("RGB")
+
+        # Resize image using numpy
+        target_width, target_height = self.calculate_target_dimensions(image_array.shape[1], image_array.shape[0])
+        image_array = np.array(Image.fromarray(image_array).resize((target_width, target_height)))
+
+        return image_array
     
     def calculate_target_dimensions(self, width, height):
         ratio = math.sqrt(self.DEFAULT_INPUT_SIZE / width / height)
