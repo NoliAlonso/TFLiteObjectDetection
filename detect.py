@@ -56,9 +56,11 @@ class TFLiteObjectDetection(ObjectDetection):
 def capture_frame(cap):
     grabbed = cap.grab()
     if not grabbed:
+        print('ERROR: Unable to grab frame from camera.')
         sys.exit('ERROR: Unable to grab frame from camera.')
     _, frame = cap.retrieve()
     if frame is None:
+        print('ERROR: Unable to grab frame from camera.')
         sys.exit('ERROR: Unable to retrieve frame from camera.')
     return frame
 
@@ -278,13 +280,13 @@ def main_with_threading():
         help='Width of frame to capture from camera.',
         required=False,
         type=int,
-        default=640)
+        default=512)
     parser.add_argument(
         '--frameHeight',
         help='Height of frame to capture from camera.',
         required=False,
         type=int,
-        default=480)
+        default=512)
     parser.add_argument(
         '--numThreads',
         help='Number of CPU threads to run the model.',
