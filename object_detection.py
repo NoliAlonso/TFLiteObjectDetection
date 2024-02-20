@@ -14,12 +14,12 @@ class ObjectDetection(object):
 
     ANCHORS = np.array([[0.573, 0.677], [1.87, 2.06], [3.34, 5.47], [7.88, 3.53], [9.77, 9.17]])
 
-    def __init__(self, labels, num_threads=1, threshold=0.5, max_detections=10, iou_threshold=0.45, default_input_size=512 * 512):
+    def __init__(self, labels, num_threads=4, threshold=0.5, overlap=0.4, max_detections=8, default_input_size=512 * 512):
         self.labels = labels
         self.prob_threshold = threshold
         self.max_detections = max_detections
         self.threads = num_threads
-        self.IOU_THRESHOLD = iou_threshold
+        self.IOU_THRESHOLD = overlap
         self.DEFAULT_INPUT_SIZE = default_input_size
 
     def _logistic(self, x):

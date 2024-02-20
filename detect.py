@@ -35,13 +35,9 @@ fps_calculation_interval = 30  # Calculate FPS every 30 frames
 
 class TFLiteObjectDetection(ObjectDetection):
     """Object Detection class for TensorFlow Lite"""
-    def __init__(self, model_filename, labels, num_threads, threshold, max_detections):
-        super(TFLiteObjectDetection, self).__init__(labels)
+    def __init__(self, model_filename, labels, num_threads, threshold, overlap, max_detections):
+        super(TFLiteObjectDetection, self).__init__(labels, num_threads, threshold, overlap, max_detections)
         self.interpreter = tf.lite.Interpreter(model_path=model_filename)
-
-        # Set the number of CPU threads for inference
-        # self.interpreter.set_num_threads(num_threads)
-
         self.interpreter.allocate_tensors()
         self.input_index = self.interpreter.get_input_details()[0]['index']
         self.output_index = self.interpreter.get_output_details()[0]['index']
@@ -87,7 +83,7 @@ def display_fps(image, fps):
     cv2.putText(image, fps_text, text_location, cv2.FONT_HERSHEY_PLAIN, font_size, text_color, font_thickness)
     return image
 
-def run(model: str, camera_id: int, width: int, height: int, num_threads: int, threshold: float, max_detections: int) -> None:
+def run(model: str, camera_id: int, width: int, height: int, num_threads: int, threshold: float, overlap: float, max_detections: int) -> None:
   """Continuously run inference on images acquired from the camera.
 
   Args:
@@ -96,7 +92,8 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
     width: The width of the frame captured from the camera.
     height: The height of the frame captured from the camera.
     num_threads: The number of CPU threads to run the model.
-    threshold: Prediction probability for displaying
+    threshold: Prediction probability for displaying.
+    overlap: Bounding box threshold
     max_detections: Maximum number of objects to display
   """
   
@@ -105,7 +102,7 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
       labels = [label.strip() for label in f.readlines()]
 
   # Load the custom vision ML model 
-  od_model = TFLiteObjectDetection(model, labels, num_threads, threshold, max_detections)
+  od_model = TFLiteObjectDetection(model, labels, num_threads, threshold, overlap, max_detections)
   
   # Variables to calculate FPS
   counter, fps = 0, 0
@@ -198,18 +195,24 @@ def main():
       help="Probability threshold.",
       required=False,
       type=float, 
-      default=0.1)
+      default=0.5)
+  parser.add_argument(
+      '--overlap',
+      help="Overlap threshold.",
+      required=False,
+      type=float, 
+      default=0.4)
   parser.add_argument(
       '--max_detections',
       help="Maximum number of detections.",
       required=False,
       type=int, 
-      default=16)
+      default=8)
 
   args = parser.parse_args()
 
   try:
-    run(args.model, args.cameraId, args.frameWidth, args.frameHeight, args.numThreads, args.threshold, args.max_detections)
+    run(args.model, args.cameraId, args.frameWidth, args.frameHeight, args.numThreads, args.threshold, args.overlap, args.max_detections)
   except Exception as e:
     print(f"An error occurred: {str(e)}")
 
