@@ -20,7 +20,6 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 from object_detection import ObjectDetection
-import threading
 
 MODEL_FILENAME = 'model.tflite'
 LABELS_FILENAME = 'labels.txt'
@@ -132,8 +131,9 @@ def run(model: str, camera_id: int, width: int, height: int, num_threads: int, t
     # Run object detection using the ObjectDetection instance
     detection_result = od_model.predict_image(pil_image)
 
-    # Draw bounding boxes based on the detection result
-    draw_detection_results(frame, detection_result)
+    if detection_result is not None:
+        # Draw bounding boxes based on the detection result
+        draw_detection_results(frame, detection_result)
   
     # Calculate the FPS periodically
     if counter % fps_calculation_interval == 0:

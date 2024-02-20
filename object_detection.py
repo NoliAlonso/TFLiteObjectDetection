@@ -156,14 +156,12 @@ class ObjectDetection(object):
     def predict_image(self, image):
         inputs = self.preprocess(image)
         prediction_outputs = self.predict(inputs)
-        return self.postprocess(prediction_outputs)
     
-    def predict(self, preprocessed_inputs):
-        """Evaluate the model and get the output
-
-        Need to be implemented for each platforms. i.e. TensorFlow, CoreML, etc.
-        """
-        raise NotImplementedError
+        # Check if there are any predictions
+        if prediction_outputs.any() and len(prediction_outputs) > 0:
+            return self.postprocess(prediction_outputs)
+        else:
+            return None
 
     def postprocess(self, prediction_outputs):
         """ Extract bounding boxes from the model outputs.
@@ -194,3 +192,5 @@ class ObjectDetection(object):
                      'height': round(float(selected_boxes[i][3]), 8)
                  }
                  } for i in range(len(selected_boxes))]
+    
+    
